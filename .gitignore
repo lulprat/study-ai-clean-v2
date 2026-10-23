@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Secrets/local config
+.env
+.env.*
+!backend/.env.example
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Bundled archives, avoid uploading old ZIPs into the repo
+*.zip
