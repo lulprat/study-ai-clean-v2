@@ -1079,22 +1079,7 @@ function renderMessage(role,content,sources=[],imageIds=[],generatedImageId=null
 
   if(generatedImageId) renderGeneratedImage(generatedImageId);
 
-  if(role === "assistant" && sources.length){
-    const sd = document.createElement("div");
-    sd.className = "sources";
-    sources.forEach(s => {
-      const el = document.createElement("div");
-      el.className = "source";
-      let t = "";
-      if(s.chapter) t += s.chapter;
-      if(s.section) t += (t ? " · " : "") + s.section;
-      if(s.book_page != null) t += (t ? " · " : "") + "Book p. " + s.book_page;
-      if(s.pdf_page != null) t += " · PDF p. " + s.pdf_page;
-      el.textContent = t || "Textbook source";
-      sd.appendChild(el);
-    });
-    container.appendChild(sd);
-  }
+  // Chat replies do not display page/source chips. Use Find Study Pages for exact pages.
 }
 
 async function renderGeneratedImage(id){
@@ -2049,7 +2034,7 @@ async function removeNotebookSource(id){const s=notebook.sources.find(x=>x.id===
 
 async function addNotebookUrl(){const url=prompt('Paste a public webpage URL or YouTube URL:');if(!url)return;try{const data=await apiJson('/notebook/source-url',{url:url.trim()});const s={id:nbUid('src'),name:data.name||url.trim(),kind:data.kind||'url',label:'',text:String(data.text||'').slice(0,160000),selected:true,createdAt:nbNow()};notebook.sources.push(s);nbSelectedSourceIds.add(s.id);await saveNotebookNow();renderNotebookSources();switchNotebookTab('source');renderSourceGuide();if(notebook.settings?.autoHighlight!==false)generateNotebookArtifact('highlight',true);}catch(e){alert('Could not import source: '+e.message)}}
 function openNotebookTextSource(){const title=prompt('Source title:','Pasted source');if(!title)return;const text=prompt('Paste the source text:');if(!text)return;const s={id:nbUid('src'),name:title.trim(),kind:'text',label:'',text:text.trim().slice(0,160000),selected:true,createdAt:nbNow()};notebook.sources.push(s);nbSelectedSourceIds.add(s.id);saveNotebookNow().then(()=>{renderNotebookSources();if(notebook.settings?.autoHighlight!==false)generateNotebookArtifact('highlight',true)})}
-async function addNotebookFile(file){if(!file)return;try{let text='';let kind='text';if(file.type==='application/pdf'||/\.pdf$/i.test(file.name)){const pages=await parsePdfClient(file);text=pages.map(p=>`[PDF page ${p.page}]\n${p.text}`).join('\n\n');kind='pdf';}else if(file.type.startsWith('audio/')){const fd=new FormData();fd.append('file',file,file.name);const r=await fetch(API+'/notebook/transcribe',{method:'POST',body:fd});const d=await r.json();if(!r.ok)throw new Error(d.detail||'Audio transcription failed');text=d.text||'';kind='audio';}else if(file.type.startsWith('image/')){text=`[Image source: ${file.name}]`;kind='image';}else{text=await file.text();}
+async function addNotebookFile(file){if(!file)return;try{let text='';let kind='text';if(file.type==='application/pdf'||/\.pdf$/i.test(file.name)){const pages=await parsePdfClient(file);text=pages.map(p=>p.text).join('\n\n');kind='pdf';}else if(file.type.startsWith('audio/')){const fd=new FormData();fd.append('file',file,file.name);const r=await fetch(API+'/notebook/transcribe',{method:'POST',body:fd});const d=await r.json();if(!r.ok)throw new Error(d.detail||'Audio transcription failed');text=d.text||'';kind='audio';}else if(file.type.startsWith('image/')){text=`[Image source: ${file.name}]`;kind='image';}else{text=await file.text();}
   if(!text.trim())throw new Error('No readable text was found in this file.');
   const s={id:nbUid('src'),name:file.name,kind,label:'',text:String(text).slice(0,160000),selected:true,createdAt:nbNow()};notebook.sources.push(s);nbSelectedSourceIds.add(s.id);await saveNotebookNow();renderNotebookSources();switchNotebookTab('source');renderSourceGuide();if(notebook.settings?.autoHighlight!==false)await generateNotebookArtifact('highlight',true);
  }catch(e){alert('Could not import '+file.name+': '+e.message)}}
@@ -2063,7 +2048,7 @@ async function selectedNotebookSourcesText(){let out=[];if(notebook?.textbookEna
 async function previewTextbookSource(){try{const t=await selectedNotebookSourcesText();document.getElementById('nbSourceGuide').innerHTML=hfMarkdown(t.slice(0,28000));switchNotebookTab('source')}catch(e){alert('Could not load textbook source: '+e.message)}}
 function previewNotebookSource(id){const s=notebook.sources.find(x=>x.id===id);if(!s)return;document.getElementById('nbSourceGuide').innerHTML='<strong>'+escapeHtml(s.name)+'</strong><div style="margin-top:9px">'+hfMarkdown((s.text||'').slice(0,30000))+'</div>';switchNotebookTab('source')}
 
-function renderNotebookChat(){const box=document.getElementById('nbChatHistory');if(!box||!notebook)return;box.innerHTML='';if(!notebook.chat.length){box.innerHTML='<div class="nb-empty">Ask a question about the selected sources. The answer stays with this notebook.</div>';return}for(const m of notebook.chat){const row=document.createElement('div');row.className='nb-chat-msg '+m.role;let cite=m.sources?.length?'<div class="nb-chat-cite">'+m.sources.map(s=>escapeHtml((s.chapter||s.name||'Source')+(s.book_page!=null?' · p. '+s.book_page:'')+(s.pdf_page!=null?' · PDF '+s.pdf_page:''))).join(' · ')+'</div>':'';row.innerHTML='<div class="nb-chat-bubble">'+(m.role==='assistant'?hfMarkdown(m.text||''):escapeHtml(m.text||''))+cite+'</div>';box.appendChild(row)}box.scrollTop=box.scrollHeight}
+function renderNotebookChat(){const box=document.getElementById('nbChatHistory');if(!box||!notebook)return;box.innerHTML='';if(!notebook.chat.length){box.innerHTML='<div class="nb-empty">Ask a question about the selected sources. The answer stays with this notebook.</div>';return}for(const m of notebook.chat){const row=document.createElement('div');row.className='nb-chat-msg '+m.role;let cite=m.sources?.length?'<div class="nb-chat-cite">'+m.sources.map(s=>escapeHtml(s.chapter||s.name||'Source')).join(' · ')+'</div>':'';row.innerHTML='<div class="nb-chat-bubble">'+(m.role==='assistant'?hfMarkdown(m.text||''):escapeHtml(m.text||''))+cite+'</div>';box.appendChild(row)}box.scrollTop=box.scrollHeight}
 async function askNotebook(){
  if(nbAskBusy||nbCreatingBusy||!notebook)return;
  const inp=document.getElementById('nbChatInput');
@@ -2077,7 +2062,7 @@ async function askNotebook(){
    notebook.chat.push({id:nbUid('chat'),role:'user',text:q,createdAt:nbNow()});
    inp.value='';renderNotebookChat();
    const history=notebook.chat.slice(-10).map(m=>({role:m.role==='user'?'user':'assistant',content:m.text||''}));
-   const data=await apiJson('/notebook/task',{task:'qa',instruction:'Answer the user question using only the selected sources. Be direct but explanatory. Cite the source name and any supplied book/PDF page markers inline where useful. Do not invent source facts.\n\nUSER QUESTION:\n'+q+'\n\nRECENT NOTEBOOK CHAT:\n'+JSON.stringify(history.slice(0,-1)),source,think:false});
+   const data=await apiJson('/notebook/task',{task:'qa',instruction:'Answer the user question using only the selected sources. Be direct but explanatory. Refer to source names, chapters, and section headings where useful, but never print book or PDF page numbers; use Find Study Pages for exact pages. Do not invent source facts.\n\nUSER QUESTION:\n'+q+'\n\nRECENT NOTEBOOK CHAT:\n'+JSON.stringify(history.slice(0,-1)),source,think:false});
    notebook.chat.push({id:nbUid('chat'),role:'assistant',text:data.answer||'No answer returned.',sources:data.sources||[],createdAt:nbNow()});
    await saveNotebookNow();
    renderNotebookChat();
@@ -2180,15 +2165,15 @@ async function generateNotebookArtifact(type,auto=false){
   const source=await selectedNotebookSourcesText();
   if(!source)throw new Error('Select at least one source.');
  let instruction='',json=false;
- if(type==='study-guide')instruction='Create a strong, detailed but efficient study guide using only the source. Include title, core ideas, definitions/terms, important examples, common mistakes, quick recap, and a 5-question self-check. Keep source/page markers where present.';
+ if(type==='study-guide')instruction='Create a strong, detailed but efficient study guide using only the source. Include title, core ideas, definitions/terms, important examples, common mistakes, quick recap, and a 5-question self-check. Keep source names and chapter/section labels, but do not output page numbers.';
  if(type==='briefing')instruction='Create a concise student briefing from only the source: what it is about, 5-8 essential ideas, key terms, important facts/examples, and a final remember-this section.';
- if(type==='faq')instruction='Create an FAQ from only the source. Return 8-12 likely student questions with concise answers. Cite source/page markers inline where possible. Avoid unsupported claims.';
+ if(type==='faq')instruction='Create an FAQ from only the source. Return 8-12 likely student questions with concise answers. Refer to source names and section headings where useful, but do not output page numbers. Avoid unsupported claims.';
  if(type==='report'){instruction=window.__nbPendingReportInstruction||'Create a useful custom report grounded only in the source.';window.__nbPendingReportInstruction=''}
- if(type==='source-summary')instruction='Summarize each selected source separately, preserving source names and important page markers. Then give a combined takeaway.';
+ if(type==='source-summary')instruction='Summarize each selected source separately, preserving source names and important chapter/section headings, without page numbers. Then give a combined takeaway.';
  if(type==='flashcards'){instruction='Return JSON only: {"cards":[{"front":"...","back":"..."}]}. Create 14 high-quality flashcards from the source. Mix definitions, concepts, relationships, examples and application. Keep answers concise but complete.';json=true}
  if(type==='quiz'){const count=Number(prompt('How many questions?',10))||10;instruction=`Return JSON only: {"questions":[{"question":"...","options":["...","...","...","..."],"answer":0,"explanation":"..."}]}. Create exactly ${Math.max(5,Math.min(15,count))} good MCQs from the source, each with 4 options and one correct answer.`;json=true}
  if(type==='mindmap'){instruction='Return JSON only: {"central_topic":"...","branches":[{"title":"...","subbranches":["...","..."]}]}. Create 6-10 useful branches and concise subbranches grounded only in the source.';json=true}
- if(type==='highlight'){instruction='Return JSON only: {"lesson":"...","key_phrases":["exact phrase 1","exact phrase 2",...]}. Write a faithful student-friendly lesson based only on the source. Select 10-20 short exact phrases copied from the source. Preserve [Source: ...], [Book page: ...], and [PDF page: ...] markers when available.';json=true}
+ if(type==='highlight'){instruction='Return JSON only: {"lesson":"...","key_phrases":["exact phrase 1","exact phrase 2",...]}. Write a faithful student-friendly lesson based only on the source. Select 10-20 short exact phrases copied from the source. Preserve source names and chapter/section references when available, but omit all page numbers.';json=true}
  if(type==='audio'){instruction='Write a natural 4-6 minute podcast-style audio overview based only on the source. Use two alternating voices labelled Host and Tutor, include transitions, examples, and a recap. Do not add unsupported information.'}
  if(type==='video'){instruction='Return JSON only: {"scenes":[{"title":"...","narration":"...","visual":"..."}]}. Create 7-10 scenes for a source-grounded video overview. Keep each narration concise and each visual description specific. Do not invent source facts.';json=true}
  if(type==='slides'){instruction='Return JSON only: {"slides":[{"title":"...","bullets":["...","...","..."]}]}. Create 8-12 teaching slides grounded only in the source.';json=true}
@@ -2425,3 +2410,5 @@ updateNotebookMeta=function(){
 
 </body>
 </html>
+
+
