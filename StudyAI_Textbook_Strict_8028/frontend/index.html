@@ -4,6 +4,37 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Study AI</title>
+<script id="study-password-gate-v1-init">
+(function(){
+  try {
+    if (sessionStorage.getItem("study_ai_password_ok_v1") !== "1") {
+      document.documentElement.classList.add("study-ai-locked");
+    }
+  } catch (_) {
+    document.documentElement.classList.add("study-ai-locked");
+  }
+})();
+</script>
+<style id="study-password-gate-v1-style">
+html.study-ai-locked, html.study-ai-locked body { min-height:100%; background:#080d18 !important; }
+html.study-ai-locked .app, html.study-ai-locked .background-vfx, html.study-ai-locked .creator-credit { visibility:hidden !important; }
+#studyPasswordGate { display:none; position:fixed; inset:0; z-index:999999; align-items:center; justify-content:center; padding:22px; background:radial-gradient(ellipse at 50% 20%,rgba(55,91,170,.20),transparent 48%),#080d18; color:#f3f6fb; font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+html.study-ai-locked #studyPasswordGate { display:flex; }
+.study-password-card { width:min(420px,100%); padding:30px; border:1px solid rgba(130,160,220,.20); border-radius:22px; background:linear-gradient(145deg,rgba(17,28,46,.98),rgba(10,18,32,.98)); box-shadow:0 28px 90px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.035); }
+.study-password-brand { display:flex; align-items:center; gap:11px; margin-bottom:24px; font-size:19px; font-weight:750; letter-spacing:-.025em; }
+.study-password-logo { width:36px; height:36px; display:grid; place-items:center; border-radius:11px; background:linear-gradient(135deg,#547eff,#765aff); box-shadow:0 8px 28px rgba(73,106,255,.30); font-size:17px; }
+.study-password-title { margin:0 0 7px; font-size:23px; font-weight:750; letter-spacing:-.035em; }
+.study-password-description { margin:0 0 20px; color:#8999b2; font-size:12px; line-height:1.65; }
+.study-password-label { display:block; margin:0 0 7px; color:#aebbd0; font-size:10px; font-weight:650; letter-spacing:.07em; text-transform:uppercase; }
+#studyPasswordInput { width:100%; height:47px; box-sizing:border-box; padding:0 13px; border:1px solid rgba(130,160,220,.20); border-radius:11px; outline:none; background:#0a1423; color:#f3f6fb; font:inherit; font-size:14px; }
+#studyPasswordInput:focus { border-color:rgba(99,139,255,.65); box-shadow:0 0 0 3px rgba(76,116,255,.12); }
+#studyPasswordSubmit { width:100%; height:46px; margin-top:12px; border:0; border-radius:11px; background:linear-gradient(135deg,#477afa,#3268e9); color:#fff; font:inherit; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 8px 25px rgba(50,99,228,.22); }
+#studyPasswordSubmit:hover { filter:brightness(1.07); }
+#studyPasswordError { min-height:18px; margin-top:9px; color:#f0a8ad; font-size:11px; }
+.study-password-foot { margin-top:15px; color:#62728b; text-align:center; font-size:9px; line-height:1.5; }
+@media(max-width:480px) { .study-password-card { padding:23px; border-radius:18px; } .study-password-title { font-size:21px; } }
+</style>
+
 <meta name="theme-color" content="#080d18">
 <script src="./config.js"></script>
 
@@ -632,6 +663,19 @@ html,body{height:100%;height:100dvh;overflow:hidden}
 
 </head>
 <body>
+<div id="studyPasswordGate" class="study-password-screen" aria-hidden="true">
+  <form class="study-password-card" id="studyPasswordForm" autocomplete="on">
+    <div class="study-password-brand"><div class="study-password-logo">✦</div><span>Study AI</span></div>
+    <h1 class="study-password-title">Welcome back</h1>
+    <p class="study-password-description">Enter the Study AI access password to continue.</p>
+    <label class="study-password-label" for="studyPasswordInput">Access password</label>
+    <input id="studyPasswordInput" type="password" placeholder="Enter password" autocomplete="current-password" required>
+    <button id="studyPasswordSubmit" type="submit">Unlock Study AI</button>
+    <div id="studyPasswordError" role="alert" aria-live="polite"></div>
+    <div class="study-password-foot">This password screen is a lightweight access gate for this browser session.</div>
+  </form>
+</div>
+
 
 <div class="background-vfx">
   <div class="grid"></div>
@@ -2408,7 +2452,38 @@ updateNotebookMeta=function(){
 })();
 </script>
 
+
+<script id="study-password-gate-v1">
+(function(){
+  // Change this value to choose a different access password.
+  const STUDY_AI_PASSWORD = "StudyAI@8029!";
+  const gate = document.getElementById("studyPasswordGate");
+  const form = document.getElementById("studyPasswordForm");
+  const input = document.getElementById("studyPasswordInput");
+  const error = document.getElementById("studyPasswordError");
+  if (!gate || !form || !input || !error) return;
+  if (!document.documentElement.classList.contains("study-ai-locked")) {
+    gate.setAttribute("aria-hidden", "true");
+    return;
+  }
+  gate.setAttribute("aria-hidden", "false");
+  window.addEventListener("DOMContentLoaded", function(){ input.focus(); }, {once:true});
+  form.addEventListener("submit", function(event){
+    event.preventDefault();
+    if (input.value === STUDY_AI_PASSWORD) {
+      try { sessionStorage.setItem("study_ai_password_ok_v1", "1"); } catch (_) {}
+      document.documentElement.classList.remove("study-ai-locked");
+      gate.setAttribute("aria-hidden", "true");
+      gate.style.display = "none";
+      error.textContent = "";
+    } else {
+      error.textContent = "That password is incorrect. Please try again.";
+      input.value = "";
+      input.focus();
+    }
+  });
+})();
+</script>
+
 </body>
 </html>
-
-
